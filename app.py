@@ -22,13 +22,15 @@ total_pages = 1
 async def fetch_conversations(api_key: str, page: int = 1) -> Dict[str, Any]:
     bee = Bee(api_key)
     logging.info(f"Fetching conversations for user 'me', page {page}")
-    conversations = await bee.get_conversations("me", page=page)
+    conversations = await bee.get_conversations("me", page=page, limit=15)
     return conversations
 
 def format_end_time(end_time: str) -> str:
     utc_time = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
-    pacific_time = utc_time.astimezone(pytz.timezone('US/Pacific'))
-    return pacific_time.strftime("%Y-%m-%d %I:%M:%S %p PT")
+    user_timezone = pytz.timezone('US/Pacific')  # TODO: Replace with actual user timezone
+    local_time = utc_time.astimezone(user_timezone)
+    timezone_abbr = local_time.strftime('%Z')
+    return f"{local_time.strftime('%I:%M %p')} {timezone_abbr}"
 
 async def fetch_conversation(api_key: str, conversation_id: int) -> Dict[str, Any]:
     bee = Bee(api_key)
@@ -45,7 +47,7 @@ def format_conversation(data: Dict[str, Any]) -> str:
     try:
         conversation = data.get("conversation", {})
         logging.debug(f"Conversation keys: {conversation.keys()}")
-        formatted = f"# Conversation Details {conversation['id']}\n\n"
+        formatted = f"# Conversation [{conversation['id']}] "
         # Format start_time and end_time
         start_time = conversation.get('start_time')
         end_time = conversation.get('end_time')
@@ -57,16 +59,16 @@ def format_conversation(data: Dict[str, Any]) -> str:
             end_pacific = end_dt.astimezone(pacific_tz)
             
             if start_pacific.date() == end_pacific.date():
-                formatted += f"**Time**: {start_pacific.strftime('%I:%M %p')} - {end_pacific.strftime('%I:%M %p')} PT\n"
+                formatted += f"{start_pacific.strftime('%I:%M %p')} - {end_pacific.strftime('%I:%M %p')} PT\n\n"
             else:
-                formatted += f"**Start Time**: {start_pacific.strftime('%Y-%m-%d %I:%M %p')} PT\n"
-                formatted += f"**End Time**: {end_pacific.strftime('%Y-%m-%d %I:%M %p')} PT\n"
+                formatted += f"\n\n**Start**: {start_pacific.strftime('%Y-%m-%d %I:%M %p')} PT\n"
+                formatted += f"**End**: {end_pacific.strftime('%Y-%m-%d %I:%M %p')} PT\n"
         elif start_time:
             start_time_formatted = format_end_time(start_time)
-            formatted += f"**Start Time**: {start_time_formatted}\n"
+            formatted += f"**Start**: {start_time_formatted}\n"
         elif end_time:
             end_time_formatted = format_end_time(end_time)
-            formatted += f"**End Time**: {end_time_formatted}\n"
+            formatted += f"**End**: {end_time_formatted}\n"
         
         # Display short_summary nicely
         if 'short_summary' in conversation:
@@ -87,12 +89,25 @@ def format_conversation(data: Dict[str, Any]) -> str:
                 speaker = utterance.get('speaker')
                 text = utterance.get('text')
                 
-                formatted += f"Speaker **[{speaker}]({current_timestamp})**: {text}\n\n"
+                if last_timestamp is not None:
+                    time_diff = datetime.fromisoformat(current_timestamp.replace('Z', '+00:00')) - datetime.fromisoformat(last_timestamp.replace('Z', '+00:00'))
+                    if time_diff.total_seconds() > 300:  # More than 5 minutes
+                        local_time = datetime.fromisoformat(current_timestamp.replace('Z', '+00:00')).astimezone().strftime('%I:%M %p')
+                        formatted += f"[{local_time}]\n\n"
+                
+                formatted += f"Speaker **[{speaker}](https://kagi.com/search?q={current_timestamp})**: {text}\n\n"
+                last_timestamp = current_timestamp
         
         return formatted
     except Exception as e:
         logging.error(f"Error formatting conversation: {str(e)}")
         return f"Error formatting conversation: {str(e)}\n\nRaw data: {conversation}"
+
+def format_duration(start_time: str, end_time: str) -> str:
+    start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+    end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+    duration = end_dt - start_dt
+    return f"{duration.total_seconds() // 3600:.0f}h {((duration.total_seconds() % 3600) // 60):.0f}m"
 
 async def list_conversations(api_key: str) -> Tuple[pd.DataFrame, str, int, int]:
     global current_page, total_pages
@@ -102,12 +117,13 @@ async def list_conversations(api_key: str) -> Tuple[pd.DataFrame, str, int, int]
     df = pd.DataFrame([
         {
             "ID": c['id'],
-            "End Time": format_end_time(c['end_time']),
-            "Summary": c['short_summary'][1:50] + "..."
+            "Duration": format_duration(c['start_time'], c['end_time']) if c['start_time'] and c['end_time'] else "",
+            "Summary": ' '.join(c['short_summary'].split()[1:21]) + "..." if c['short_summary'] else "",
+            "End Time": format_end_time(c['end_time']) if c['end_time'] else "",
         }
         for c in conversations
     ])
-    df = df[["ID", "End Time", "Summary"]]  # Reorder columns to ensure ID is first
+    df = df[["ID", "End Time", "Duration", "Summary"]]  # Reorder columns to ensure ID is first
     info = f"Page {current_page} of {total_pages}"
     return df, info, current_page, total_pages
 
@@ -192,7 +208,11 @@ with gr.Blocks() as demo:
         with gr.Column(scale=1):
             api_key = gr.Textbox(label="Enter your Bee API Key", type="password")
             load_button = gr.Button("Load Conversations")
-            conversation_table = gr.Dataframe(label="Select a conversation (CLICK ON THE ID)", interactive=True)
+            conversation_table = gr.Dataframe(
+                label="Select a conversation (CLICK ON THE ID!!!)",
+                interactive=True,
+                row_count=10  # Adjust this number to approximate the desired height
+            )
             info_text = gr.Textbox(label="Info", interactive=False)
             prev_page = gr.Button("Previous Page")
             next_page = gr.Button("Next Page")
@@ -224,14 +244,36 @@ with gr.Blocks() as demo:
             logging.info(f"SelectData event: index={evt.index}, value={evt.value}")
             conversation_id = int(evt.value)
             logging.info(f"Updating conversation with ID: {conversation_id}")
+            
+            # Return a loading message immediately
+            yield gr.update(value="Loading conversation details...", visible=True), gr.update(visible=False), None
+            
+            # Fetch and format the conversation
             formatted_conversation = await display_conversation(api_key, conversation_id)
-            return formatted_conversation, gr.update(visible=True), conversation_id
+            
+            # Return the formatted conversation and update the UI
+            yield formatted_conversation, gr.update(visible=True), conversation_id
         except Exception as e:
             error_message = f"Error updating conversation: {str(e)}"
             logging.error(error_message)
-            return error_message, gr.update(visible=False), None
+            yield error_message, gr.update(visible=False), None
 
-    conversation_table.select(update_conversation, inputs=[api_key], outputs=[conversation_details, delete_button, selected_conversation_id])
+    conversation_table.select(
+        update_conversation,
+        inputs=[api_key],
+        outputs=[conversation_details, delete_button, selected_conversation_id],
+        _js="(api_key, evt) => [api_key, evt]",  # This ensures the evt object is passed correctly
+    ).then(
+        lambda: None,  # This is a no-op function
+        None,  # No inputs
+        None,  # No outputs
+        _js="""
+        () => {
+            // Scroll to the conversation details
+            document.querySelector('#conversation_details').scrollIntoView({behavior: 'smooth'});
+        }
+        """
+    )
 
     delete_button.click(
         delete_selected_conversation,
