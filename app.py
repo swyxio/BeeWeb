@@ -145,7 +145,7 @@ async def delete_conversation(api_key: str, conversation_id: int) -> str:
         return f"Failed to delete conversation: {str(e)}"
 
 # client = InferenceClient("Qwen/Qwen2.5-14B-Instruct") # needs more memory than available in free tier - The model Qwen/Qwen2.5-14B-Instruct is too large to be loaded automatically (29GB > 10GB)
-client = InferenceClient("microsoft/Phi-3-small-128k-instruct")
+client = InferenceClient("microsoft/Phi-3-mini-128k-instruct")
 
 def respond(
     message: str,
