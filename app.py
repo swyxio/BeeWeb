@@ -144,7 +144,7 @@ async def delete_conversation(api_key: str, conversation_id: int) -> str:
         logging.error(f"Error deleting conversation {conversation_id}: {str(e)}")
         return f"Failed to delete conversation: {str(e)}"
 
-client = InferenceClient("HuggingFaceH4/zephyr-7b-beta")
+client = InferenceClient("Qwen/Qwen2.5-14B-Instruct")
 
 def respond(
     message: str,
@@ -225,6 +225,7 @@ with gr.Blocks() as demo:
             delete_button = gr.Button("Delete Conversation", visible=False)
     
     selected_conversation_id = gr.State(None)
+    conversation_context = gr.State("")
 
     async def load_conversations(api_key):
         try:
@@ -246,23 +247,22 @@ with gr.Blocks() as demo:
             logging.info(f"Updating conversation with ID: {conversation_id}")
             
             # Return a loading message immediately
-            yield gr.update(value="Loading conversation details...", visible=True), gr.update(visible=False), None
+            yield gr.update(value="Loading conversation details...", visible=True), gr.update(visible=False), None, None
             
             # Fetch and format the conversation
             formatted_conversation = await display_conversation(api_key, conversation_id)
             
             # Return the formatted conversation and update the UI
-            yield formatted_conversation, gr.update(visible=True), conversation_id
+            yield formatted_conversation, gr.update(visible=True), conversation_id, formatted_conversation
         except Exception as e:
             error_message = f"Error updating conversation: {str(e)}"
             logging.error(error_message)
-            yield error_message, gr.update(visible=False), None
+            yield error_message, gr.update(visible=False), None, None
 
     conversation_table.select(
         update_conversation,
         inputs=[api_key],
-        outputs=[conversation_details, delete_button, selected_conversation_id],
-        # _js="(api_key, evt) => [api_key, evt]",  # This ensures the evt object is passed correctly
+        outputs=[conversation_details, delete_button, selected_conversation_id, conversation_context],
     )
     # .then(
     #     lambda: None,  # This is a no-op function
@@ -300,10 +300,10 @@ with gr.Blocks() as demo:
         respond,
         additional_inputs=[
             gr.Textbox(value="You are a friendly Chatbot. Analyze and discuss the given conversation context.", label="System message"),
-            gr.Slider(minimum=1, maximum=2048, value=512, step=1, label="Max new tokens"),
+            gr.Slider(minimum=1, maximum=2048, value=2048, step=1, label="Max new tokens"),
             gr.Slider(minimum=0.1, maximum=4.0, value=0.7, step=0.1, label="Temperature"),
             gr.Slider(minimum=0.1, maximum=1.0, value=0.95, step=0.05, label="Top-p (nucleus sampling)"),
-            conversation_details
+            conversation_context
         ],
     )
 
