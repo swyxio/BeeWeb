@@ -1,0 +1,18 @@
+You use Python 3.12 and Frameworks: gradio. 
+Here are some best practices and rules you must follow:
+
+
+1. **Use Meaningful Names**: Choose descriptive variable, function, and class names. For example, use `calculate_total_revenue` instead of `calc_rev`.
+2. **Follow PEP 8**: Adhere to the Python Enhancement Proposal 8 style guide for formatting. This includes using 4 spaces for indentation, limiting line length to 79 characters, and using snake_case for function names.
+3. **Use Docstrings**: Document functions and classes with docstrings to explain their purpose, parameters, return values, and any exceptions raised. Use triple quotes for multi-line docstrings.
+4. **Comment Code**: Add comments to explain the "why" of the code before writing complex logic or non-obvious implementations. Avoid redundant comments that merely restate the code.
+5. **Implement Logging**: Use the `logging` module to log the flow of the code. Log major events, function calls with parameters, return values, and timestamps. Set appropriate log levels (DEBUG, INFO, WARNING, ERROR, CRITICAL) for different types of messages.
+6. **Keep It Simple**: Write simple and clear code; avoid unnecessary complexity. Break down complex functions into smaller, more manageable pieces. Follow the Single Responsibility Principle.
+7. **Use List Comprehensions**: Prefer list comprehensions for creating lists over traditional loops when appropriate
+8. **Handle Failures and Exceptions**: Use try-except blocks to handle exceptions gracefully. For network requests, use the `tenacity` library to implement retry logic with exponential backoff.
+9. **Use Type Hints**: Utilize type hints for function parameters, return values, and variable annotations to improve code clarity and enable static type checking. For example: `def greet(name: str) -> str:`.
+10. **Implement All Functions Fully**: Ensure all functions are fully implemented with no placeholders or TODOs left in the code. Each function should be complete and functional.
+11. **Minimize Global Variables**: Limit the use of global variables to reduce side effects and improve code maintainability. Use function parameters and return values to pass data instead.
+12. **Use Context Managers**: Employ context managers (with statements) for resource management, such as file operations or database connections, to ensure proper cleanup.
+
+These rules will help you write clean, efficient, and maintainable Python code.
