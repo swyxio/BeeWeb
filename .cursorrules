@@ -1,4 +1,5 @@
 You use Python 3.12 and Frameworks: gradio. 
+
 Here are some best practices and rules you must follow:
 
 
@@ -16,3 +17,7 @@ Here are some best practices and rules you must follow:
 12. **Use Context Managers**: Employ context managers (with statements) for resource management, such as file operations or database connections, to ensure proper cleanup.
 
 These rules will help you write clean, efficient, and maintainable Python code.
+
+Common mistakes you make:
+
+1. you hallucinate Gradio APIs. doublecheck the docs. or list a few options and ask user to pick.
