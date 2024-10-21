@@ -262,18 +262,19 @@ with gr.Blocks() as demo:
         update_conversation,
         inputs=[api_key],
         outputs=[conversation_details, delete_button, selected_conversation_id],
-        _js="(api_key, evt) => [api_key, evt]",  # This ensures the evt object is passed correctly
-    ).then(
-        lambda: None,  # This is a no-op function
-        None,  # No inputs
-        None,  # No outputs
-        _js="""
-        () => {
-            // Scroll to the conversation details
-            document.querySelector('#conversation_details').scrollIntoView({behavior: 'smooth'});
-        }
-        """
+        # _js="(api_key, evt) => [api_key, evt]",  # This ensures the evt object is passed correctly
     )
+    # .then(
+    #     lambda: None,  # This is a no-op function
+    #     None,  # No inputs
+    #     None,  # No outputs
+    #     _js="""
+    #     () => {
+    #         // Scroll to the conversation details
+    #         document.querySelector('#conversation_details').scrollIntoView({behavior: 'smooth'});
+    #     }
+    #     """
+    # )
 
     delete_button.click(
         delete_selected_conversation,
