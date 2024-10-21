@@ -203,7 +203,7 @@ async def delete_selected_conversation(api_key: str, conversation_id: int):
         return error_message, None, None, gr.update(visible=False), ""
 
 with gr.Blocks() as demo:
-    gr.Markdown("# Bee AI Conversation Viewer and Chat")
+    gr.Markdown("# Bee AI Conversation Viewer and Chat. See [source](https://github.com/swyxio/BeeWeb/) and [Space](https://huggingface.co/spaces/swyx/BeeWeb)")
     
     with gr.Row():
         with gr.Column(scale=1):
