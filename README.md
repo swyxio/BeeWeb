@@ -18,6 +18,9 @@ An example chatbot using [Gradio](https://gradio.app), [`huggingface_hub`](https
 
 ## hosted
 
+get api from https://developer.bee.computer/keys 
+
+
 https://huggingface.co/spaces/swyx/BeeWeb?logs=build
 
 ## running 
